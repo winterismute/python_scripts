@@ -7,13 +7,12 @@ fp = open("duo_courses.txt")
 c = json.load(fp)
 fp.close()
 
+print()
+
 phases = {1:"red", 2:"orange", 3:"green"}
 map = {1:{},2:{},3:{}}
 
-for i in c["directions"]:
-  p = i["phase"]
-  f = i["from_language_id"]
-  t = i["learning_language_id"]
+for (p, f, t) in [(a["phase"],a["from_language_id"],a["learning_language_id"]) for a in c["directions"]]:
   if f in map[p].keys():
     map[p][f].append(t)
   else:
