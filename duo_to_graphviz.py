@@ -7,27 +7,24 @@ fp = open("duo_courses.txt")
 c = json.load(fp)
 fp.close()
 
-print()
-
-phases = {1:"red", 2:"orange", 3:"green"}
+phases = {1:"red", 2:"yellow", 3:"green"}
 map = {1:{},2:{},3:{}}
 
-for (p, f, t) in [(a["phase"],a["from_language_id"],a["learning_language_id"]) for a in c["directions"]]:
-  if f in map[p].keys():
-    map[p][f].append(t)
-  else:
-    map[p][f] = [t]
+for (phase, from_lang, to_lang) in [(a["phase"],a["from_language_id"],a["learning_language_id"]) for a in c["directions"]]:
+  if from_lang not in map[phase].keys():
+    map[phase][from_lang] = []
+  map[phase][from_lang].append(to_lang)
 
 print("digraph G {")
 print("  rankdir=LR;")
 print("  overlap=false;")
 
-for p in [1,2,3]:
-  print()
-  print("  edge [color={}]".format(phases[p]))
-  for k in map[p].keys():
-    print("  \"{}\" -> {{".format(c["languages"][k]["name"]), end="")
-    for l in map[p][k]:
-      print("\"{}\" ".format(c["languages"][l]["name"]), end="")
-    print("}; ")
+for phase in [1,2,3]:
+  print("\n  edge [color={}]".format(phases[phase]))
+  for from_lang in sorted(map[phase].keys()):
+    print("  \"{}\" -> {{ ".format(c["languages"][from_lang]["name"]), end="")
+    for to_lang in sorted(map[phase][from_lang]):
+      print("\"{}\" ".format(c["languages"][to_lang]["name"]), end="")
+    print("};")
 print("}")
+
