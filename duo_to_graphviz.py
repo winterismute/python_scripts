@@ -3,6 +3,7 @@
 # Either download the API courses list from https://incubator.duolingo.com/api/1/courses/list
 # and run the script with the file as the first argument
 # or run it with no arguments and it will try to download the course data automatically
+# for more options run: ./duo_to_graphviz.py -h
 
 # use results with graphviz: ./duo_to_graphviz.py | circo -Tpng -o courses.png
 
@@ -51,7 +52,7 @@ def parse_json(data,source,dest,phases):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Process Duolingo course data into a dot file for graphviz')
-    parser.add_argument('-f','--filename', help="Name of the file with the Duolingo course data. Requests current data from the Duolino API if ommitted")
+    parser.add_argument('filename', nargs="?", help="Name of the file with the Duolingo course data. Requests current data from the Duolino API if ommitted")
     parser.add_argument('-s','--source_language', default="", help="Filter to only show courses from the SOURCE_LANGUAGE")
     parser.add_argument('-d','--dest_language', default="", help="Filter to only show courses to the DEST_LANGUAGE")
     parser.add_argument('-p','--phase', nargs="*", type=int, default=[1,2,3], choices=[1,2,3], help="Only show courses in the selected phase(s)")
