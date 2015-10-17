@@ -3,20 +3,30 @@
 # Either download the API courses list from https://incubator.duolingo.com/api/1/courses/list
 # and run the script with the file as the first argument
 # or run it with no arguments and it will try to download the course data automatically
+
+# If you are going to try out the filtering options, then go easy on Duo's API.
+# Download the data and then use it locally
+# ./duo_to_graphviz.py --download > list
+# ./duo_to_graphviz.py list <options>
+
 # for more options run: ./duo_to_graphviz.py -h
 
 # use results with graphviz: ./duo_to_graphviz.py | circo -Tpng -o courses.png
 
 
-def get_api_data():
+def download_api_data():
     import requests
-    fp = requests.get('https://incubator.duolingo.com/api/1/courses/list')
+    return requests.get('https://incubator.duolingo.com/api/1/courses/list')
+
+def get_api_data():
+    fp = download_api_data()
     return fp.json()
 
 def get_file_data(f):
     import json
-    fp = open(f)
-    return json.load(fp)
+    with open(f) as fp:
+      data = json.load(fp)
+    return data
 
 def parse_json(data,source,dest,phases):
     colours = {1:'red', 2:'yellow', 3:'green'}
@@ -56,9 +66,12 @@ if __name__ == '__main__':
     parser.add_argument('-s','--source_language', default='', help='Filter to only show courses from the SOURCE_LANGUAGE')
     parser.add_argument('-d','--dest_language', default='', help='Filter to only show courses to the DEST_LANGUAGE')
     parser.add_argument('-p','--phase', nargs='*', type=int, default=[1,2,3], choices=[1,2,3], help='Only show courses in the selected phase(s)')
+    parser.add_argument('--download', default='', action='store_const', const='Y', help='Download and display the API data for easy output to a file')
     args = parser.parse_args()
 
-    if args.filename:
+    if args.download == 'Y':
+      print(download_api_data().text)
+    elif args.filename:
         #try to open the file specified on the command line
         parse_json(get_file_data(args.filename),args.source_language.upper(),args.dest_language.upper(),args.phase)
     else:
