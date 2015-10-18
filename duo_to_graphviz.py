@@ -29,11 +29,12 @@ def get_file_data(f):
     return data
 
 def parse_json(data,source,dest,phases):
+
     colours = {1:'red', 2:'yellow', 3:'green'}
 
     course_data = filter(lambda cd: cd[0] in phases and
-                                    (data['languages'][cd[1]]['name'].upper() == source or not source) and
-                                    (data['languages'][cd[2]]['name'].upper() == dest or not dest),
+                                    (data['languages'][cd[1]]['name'].upper() in source or len(source) == 0) and
+                                    (data['languages'][cd[2]]['name'].upper() in dest or len(dest) == 0),
                                     [(a['phase'],a['from_language_id'],a['learning_language_id']) for a in data['directions']])
 
     courses = {}
@@ -63,8 +64,8 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Process Duolingo course data into a dot file for graphviz')
     parser.add_argument('filename', nargs='?', help='Name of the file with the Duolingo course data. Requests current data from the Duolino API if ommitted')
-    parser.add_argument('-s','--source_language', default='', help='Filter to only show courses from the SOURCE_LANGUAGE')
-    parser.add_argument('-d','--dest_language', default='', help='Filter to only show courses to the DEST_LANGUAGE')
+    parser.add_argument('-s','--source_language', nargs='*', default='', type=str, help='Filter to only show courses from the SOURCE_LANGUAGE')
+    parser.add_argument('-d','--dest_language', nargs='*', default='', type=str, help='Filter to only show courses to the DEST_LANGUAGE')
     parser.add_argument('-p','--phase', nargs='*', type=int, default=[1,2,3], choices=[1,2,3], help='Only show courses in the selected phase(s)')
     parser.add_argument('--download', default='', action='store_const', const='Y', help='Download and display the API data for easy output to a file')
     args = parser.parse_args()
@@ -73,7 +74,13 @@ if __name__ == '__main__':
       print(download_api_data().text)
     elif args.filename:
         #try to open the file specified on the command line
-        parse_json(get_file_data(args.filename),args.source_language.upper(),args.dest_language.upper(),args.phase)
+        parse_json(get_file_data(args.filename),
+                   list(map(str.upper, args.source_language)),
+                   list(map(str.upper, args.dest_language)),
+                   args.phase)
     else:
         #grab the latest course data from the API
-        parse_json(get_api_data(),args.source_language,args.dest_language,args.phase)
+        parse_json(get_api_data(),
+                   list(map(str.upper, args.source_language)),
+                   list(map(str.upper, args.dest_language)),
+                   args.phase)
