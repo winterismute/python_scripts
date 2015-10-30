@@ -96,5 +96,4 @@ if __name__ == '__main__':
                             list(map(str.upper, args.dest_language)),
                             args.phase)
         edges = {phase:colour for (phase, colour) in zip([1,2,3], args.colours)}
-        print(edges)
         parse_json(course_data, edges)
