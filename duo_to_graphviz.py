@@ -28,14 +28,25 @@ def get_file_data(f):
       data = json.load(fp)
     return data
 
-def parse_json(data,source,dest,phases):
+def filter_languages(data, source, dest, phases):
 
-    colours = {1:'red', 2:'yellow', 3:'green'}
+    include_sources = [l for l in source if l[0] != '~']
+    exclude_sources = [l[1:] for l in source if l[0] == '~']
+
+    include_destinations = [l for l in dest if l[0] != '~']
+    exclude_destinations = [l[1:] for l in dest if l[0] == '~']
 
     course_data = filter(lambda cd: cd[0] in phases and
-                                    (data['languages'][cd[1]]['name'].upper() in source or len(source) == 0) and
-                                    (data['languages'][cd[2]]['name'].upper() in dest or len(dest) == 0),
-                                    [(a['phase'],a['from_language_id'],a['learning_language_id']) for a in data['directions']])
+                             ((len(include_sources) == 0 or data['languages'][cd[1]]['name'].upper() in include_sources) and
+                              (len(exclude_sources) == 0 or data['languages'][cd[1]]['name'].upper() not in exclude_sources)) and
+                             ((len(include_destinations) == 0 or data['languages'][cd[2]]['name'].upper() in include_destinations) and
+                              (len(exclude_destinations) == 0 or data['languages'][cd[2]]['name'].upper() not in exclude_destinations)),
+                             [(a['phase'],a['from_language_id'],a['learning_language_id']) for a in data['directions']])
+    return course_data
+
+def parse_json(course_data):
+
+    colours = {1:'red', 2:'yellow', 3:'green'}
 
     courses = {}
     for (phase, from_lang, to_lang) in sorted(course_data):
@@ -64,23 +75,26 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Process Duolingo course data into a dot file for graphviz')
     parser.add_argument('filename', nargs='?', help='Name of the file with the Duolingo course data. Requests current data from the Duolino API if ommitted')
-    parser.add_argument('-s','--source_language', nargs='*', default='', type=str, help='Filter to only show courses from the SOURCE_LANGUAGE')
-    parser.add_argument('-d','--dest_language', nargs='*', default='', type=str, help='Filter to only show courses to the DEST_LANGUAGE')
+    parser.add_argument('-s','--source_language', nargs='*', default='', type=str, help='Filter to only show courses from the SOURCE_LANGUAGE. Prefix with a "~" to exclude the language instead')
+    parser.add_argument('-d','--dest_language', nargs='*', default='', type=str, help='Filter to only show courses to the DEST_LANGUAGE. Prefix with a "~" to exclude the language instead')
     parser.add_argument('-p','--phase', nargs='*', type=int, default=[1,2,3], choices=[1,2,3], help='Only show courses in the selected phase(s)')
     parser.add_argument('--download', default='', action='store_const', const='Y', help='Download and display the API data for easy output to a file')
     args = parser.parse_args()
 
-    if args.download == 'Y':
-      print(download_api_data().text)
-    elif args.filename:
-        #try to open the file specified on the command line
-        parse_json(get_file_data(args.filename),
-                   list(map(str.upper, args.source_language)),
-                   list(map(str.upper, args.dest_language)),
-                   args.phase)
+    data = None
+    if args.download == 'Y' or not args.filename:
+      #grab the latest course data from the API
+      data = download_api_data()
     else:
-        #grab the latest course data from the API
-        parse_json(get_api_data(),
-                   list(map(str.upper, args.source_language)),
-                   list(map(str.upper, args.dest_language)),
-                   args.phase)
+      data = get_file_data(args.filename)
+
+    if args.download == 'Y':
+      print(data.text)
+
+    else:
+        course_data = filter_languages(data,
+                            list(map(str.upper, args.source_language)),
+                            list(map(str.upper, args.dest_language)),
+                            args.phase)
+
+        parse_json(course_data)
