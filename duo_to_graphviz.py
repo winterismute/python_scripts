@@ -44,9 +44,7 @@ def filter_languages(data, source, dest, phases):
                              [(a['phase'],a['from_language_id'],a['learning_language_id']) for a in data['directions']])
     return course_data
 
-def parse_json(course_data):
-
-    colours = {1:'red', 2:'yellow', 3:'green'}
+def parse_json(course_data, colours):
 
     courses = {}
     for (phase, from_lang, to_lang) in sorted(course_data):
@@ -79,6 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('-d','--dest_language', nargs='*', default='', type=str, help='Filter to only show courses to the DEST_LANGUAGE. Prefix with a "~" to exclude the language instead')
     parser.add_argument('-p','--phase', nargs='*', type=int, default=[1,2,3], choices=[1,2,3], help='Only show courses in the selected phase(s)')
     parser.add_argument('--download', default='', action='store_const', const='Y', help='Download and display the API data for easy output to a file')
+    parser.add_argument('-c','--colours', nargs=3, type=str, default=['red','yellow','green'], help='Choose alternate colours for phase 1, 2 and 3')
     args = parser.parse_args()
 
     data = None
@@ -96,5 +95,6 @@ if __name__ == '__main__':
                             list(map(str.upper, args.source_language)),
                             list(map(str.upper, args.dest_language)),
                             args.phase)
-
-        parse_json(course_data)
+        edges = {phase:colour for (phase, colour) in zip([1,2,3], args.colours)}
+        print(edges)
+        parse_json(course_data, edges)
