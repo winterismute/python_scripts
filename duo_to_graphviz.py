@@ -58,13 +58,13 @@ def parse_json(course_data, languages, colours):
     print('  rankdir=LR;')
     print('  overlap=false;')
 
-    for phase in courses.keys():
+    for (phase,sources) in courses.items():
         print('\n  edge [color={}]'.format(colours[phase]))
 
-        for from_lang in sorted(courses[phase]):
-            print('  "{}" -> {{ '.format(languages[from_lang]), end='')
-            for to_lang in sorted(courses[phase][from_lang]):
-                print('"{}" '.format(languages[to_lang]), end='')
+        for (source, dests) in sorted(sources.items()):
+            print('  "{}" -> {{ '.format(languages[source]), end='')
+            for dest in sorted(dests):
+                print('"{}" '.format(languages[dest]), end='')
 
             print('};')
     print('}')
