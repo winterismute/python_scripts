@@ -36,23 +36,23 @@ def filter_languages(data, languages, source, dest, phases):
     include_destinations = [l for l in dest if l[0] != '~']
     exclude_destinations = [l[1:] for l in dest if l[0] == '~']
 
-    course_data = filter(lambda cd: cd[0] in phases and
-                             ((len(include_sources) == 0 or languages[cd[1]].upper() in include_sources) and
-                              (len(exclude_sources) == 0 or languages[cd[1]].upper() not in exclude_sources)) and
-                             ((len(include_destinations) == 0 or languages[cd[2]].upper() in include_destinations) and
-                              (len(exclude_destinations) == 0 or languages[cd[2]].upper() not in exclude_destinations)),
+    course_data = filter(lambda cd: cd.phase in phases and
+                             ((len(include_sources) == 0 or languages[cd.source].upper() in include_sources) and
+                              (len(exclude_sources) == 0 or languages[cd.source].upper() not in exclude_sources)) and
+                             ((len(include_destinations) == 0 or languages[cd.dest].upper() in include_destinations) and
+                              (len(exclude_destinations) == 0 or languages[cd.dest].upper() not in exclude_destinations)),
                              data)
     return course_data
 
 def parse_json(course_data, languages, colours):
 
     courses = {}
-    for (phase, from_lang, to_lang) in sorted(course_data):
-        if phase not in courses.keys():
-            courses[phase] = {}
-        if from_lang not in courses[phase].keys():
-            courses[phase][from_lang] = []
-        courses[phase][from_lang].append(to_lang)
+    for course in sorted(course_data):
+        if course.phase not in courses:
+            courses[course.phase] = {}
+        if course.source not in courses[course.phase]:
+            courses[course.phase][course.source] = []
+        courses[course.phase][course.source].append(course.dest)
 
     print('digraph G {')
     print('  rankdir=LR;')
@@ -96,7 +96,11 @@ def main():
     else:
         languages = {code:data['languages'][code]['name'] for code in data['languages']}
 
-        course_data = [(direction['phase'],direction['from_language_id'],direction['learning_language_id']) for direction in data['directions']]
+        from collections import namedtuple
+        Language = namedtuple('Language', ['phase', 'source', 'dest'])
+
+        course_data = [Language(direction['phase'],direction['from_language_id'],direction['learning_language_id'])
+                            for direction in data['directions']]
         course_data = filter_languages(course_data,
                             languages,
                             list(map(str.upper, args.source_language)),
