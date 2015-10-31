@@ -38,9 +38,9 @@ def filter_languages(data, languages, source, dest, phases):
 
     course_data = filter(lambda cd: cd.phase in phases and
                              ((len(include_sources) == 0 or languages[cd.source].upper() in include_sources) and
-                              (len(exclude_sources) == 0 or languages[cd.source].upper() not in exclude_sources)) and
+                              (languages[cd.source].upper() not in exclude_sources)) and
                              ((len(include_destinations) == 0 or languages[cd.dest].upper() in include_destinations) and
-                              (len(exclude_destinations) == 0 or languages[cd.dest].upper() not in exclude_destinations)),
+                              (languages[cd.dest].upper() not in exclude_destinations)),
                              data)
     return course_data
 
@@ -63,6 +63,7 @@ def parse_json(course_data, languages, colours):
 
         for (source, dests) in sorted(sources.items()):
             print('  "{}" -> {{ '.format(languages[source]), end='')
+
             for dest in sorted(dests):
                 print('"{}" '.format(languages[dest]), end='')
 
@@ -94,7 +95,7 @@ def main():
       print(data.text)
 
     else:
-        languages = {code:data['languages'][code]['name'] for code in data['languages']}
+        languages = {code:details['name'] for (code,details) in data['languages'].items()}
 
         from collections import namedtuple
         Language = namedtuple('Language', ['phase', 'source', 'dest'])
