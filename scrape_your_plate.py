@@ -149,7 +149,7 @@ def format_recipe(old_soup):
 
 def save_recipe(title, soup):
     title = title.replace('/','_').replace('"', '').replace(':','')
-    with open('./recipes/{}'.format(title), 'wb') as f:
+    with open('./recipes/{}.html'.format(title), 'wb') as f:
         f.write(soup.prettify('latin-1'))
 
 if __name__ == '__main__':
