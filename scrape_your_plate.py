@@ -55,9 +55,7 @@ def pp_get_page(session, page):
                      ,'Accept-Encoding': 'gzip, deflate'}
     r = session.request('POST', url, data=parameters, headers=headers)
 
-    print(r)
-    soup = BeautifulSoup(r.content)
-    soup = BeautifulSoup(json.loads(soup.find('p').get_text())['d'])
+    soup = BeautifulSoup(r.json()['d'])
     return soup
 
 def scrape_recipe_links(soup):
