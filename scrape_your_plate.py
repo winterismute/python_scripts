@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import json
 import time
 import getpass
+import re
 
 def pp_login(username, password):
     if not password:
@@ -47,14 +48,14 @@ def pp_login(username, password):
     return s
 
 def pp_get_page(session, page):
+    print('Downloading page {} of recipes'.format(page+1))
+
     url = 'http://www.pepperplate.com/recipes/default.aspx/GetPageOfResults'
     parameters = json.dumps({'pageIndex':page,
                              'pageSize':20,
                              'sort':4,
                              'tagIds': [],
                              'favoritesOnly':0})
-
-    print(parameters)
 
     headers={'Referer':'http://www.pepperplate.com/recipes/default.aspx'
       #content-type seems to break shit. Don't know why
@@ -70,18 +71,86 @@ def pp_get_page(session, page):
     return soup
 
 def scrape_recipe_links(soup):
-  return [a['href'] for d in soup.find_all('div',{'class':'item'}) for a in d.find_all('a')]
+    links = [a['href'] for d in soup.find_all('div',{'class':'item'}) for a in d.find_all('a')]
+    print('Found {} recipes'.format(len(links)))
+    return links
 
 def get_recipe(session, id):
-  url = 'http://www.pepperplate.com/recipes/{}'.format(id)
-  r = session.request('GET', url)
-  soup = BeautifulSoup(r.content)
+    url = 'http://www.pepperplate.com/recipes/{}'.format(id)
+    r = session.request('GET', url)
+    soup = BeautifulSoup(r.content)
 
-  print(id)
-  print(r)
+    title = soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
+    print('Downloaded "{}"'.format(title))
 
-  with open('./recipes/{}'.format(id), 'w') as f:
-    f.write(soup.prettify())
+    thumb = soup.find(id='cphMiddle_cphMain_imgRecipeThumb')
+    if thumb:
+        print('* Downloading thumbnail')
+        r = requests.get(thumb['src'])
+
+        m = re.search('recipes/(.+\.jpg)', thumb['src'])
+        with open('./recipes/img/{}'.format(m.group(1)),'wb') as img:
+            img.write(r.content)
+
+    return title, soup
+
+def format_recipe(old_soup):
+    new_soup = BeautifulSoup('<html><head></head><body></body></html>')
+
+    thumb = old_soup.find(id='cphMiddle_cphMain_imgRecipeThumb')
+    if thumb:
+        hdr = new_soup.new_tag('img')
+
+        m = re.search('recipes/(.+\.jpg)', thumb['src'])
+
+        hdr['src'] = './img/{}'.format(m.group(1))
+        new_soup.body.append(hdr)
+
+    title = old_soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
+    hdr = new_soup.new_tag('title')
+    hdr.append(title)
+    new_soup.head.append(hdr)
+
+    hdr = new_soup.new_tag('h1')
+    hdr.append(title)
+    new_soup.body.append(hdr)
+
+    hdr = new_soup.new_tag('h3')
+    hdr.append('Ingredients')
+    new_soup.body.append(hdr)
+
+    item = old_soup.find('ul', {'class':'inggroups'})
+    if item:
+        new_soup.body.append(item)
+    else:
+        new_soup.body.append('No ingedients listed')
+
+    hdr = new_soup.new_tag('h3')
+    hdr.append('Instructions')
+    new_soup.body.append(hdr)
+
+    item = old_soup.find('ol', {'class':'dirgroupitems'})
+    if item:
+        new_soup.body.append(item)
+    else:
+        new_soup.body.append('No instructions listed')
+
+    hdr = new_soup.new_tag('h3')
+    hdr.append('Notes')
+    new_soup.body.append(hdr)
+
+    notes = old_soup.find(id="cphMiddle_cphMain_lblNotes")
+    if notes:
+        hdr = new_soup.new_tag('pre')
+        hdr.append(notes.get_text())
+        new_soup.append(hdr)
+
+    return new_soup
+
+def save_recipe(title, soup):
+    title = title.replace('/','_').replace('"', '').replace(':','')
+    with open('./recipes/{}'.format(title), 'wb') as f:
+        f.write(soup.prettify('latin-1'))
 
 if __name__ == '__main__':
     import argparse
@@ -98,7 +167,9 @@ if __name__ == '__main__':
     while len(links) > 0:
       for l in links:
         time.sleep(1) #sleep 1 second between requests to not mash the server
-        get_recipe(session, l)
+        title, soup = get_recipe(session, l)
+        soup = format_recipe(soup)
+        save_recipe(title, soup)
       page += 1
       soup = pp_get_page(session,page)
       links = scrape_recipe_links(soup)
