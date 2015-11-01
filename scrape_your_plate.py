@@ -8,8 +8,14 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import time
+import getpass
 
 def pp_login(username, password):
+    if not password:
+        password = getpass.getpass('Please enter the password for account {}: '.format(username))
+
+    print('Logging into pepperplate.com')
+
     url = 'https://www.pepperplate.com/login.aspx'
     headers = {"User-Agent":"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36"}
     
@@ -32,7 +38,12 @@ def pp_login(username, password):
     }
     
     r = s.post(url, data=login_data)
-    print(r.url)
+    if r.url == 'http://www.pepperplate.com/recipes/default.aspx':
+        print('Login sucessful')
+    else:
+        print('Login failed. Please try again')
+        exit(1)
+
     return s
 
 def pp_get_page(session, page):
@@ -76,7 +87,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Scrape recipies from Pepperplate')
     parser.add_argument('username', help='Username to log in with')
-    parser.add_argument('password', help='Password to log in with. Will update later to request it if not provided on the command line')
+    parser.add_argument('password', nargs="?", default=None, help='Password to log in with. Will update later to request it if not provided on the command line')
     args = parser.parse_args()
 
     session = pp_login(args.username, args.password)
