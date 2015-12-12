@@ -58,7 +58,6 @@ def pp_get_page(session, page):
                              'favoritesOnly':0})
 
     headers={'Referer':'http://www.pepperplate.com/recipes/default.aspx'
-      #content-type seems to break shit. Don't know why
                      ,'Content-Type': 'application/json'
                      ,'X-Requested-With': 'XMLHttpRequest'
                      ,'DNT':1
@@ -156,7 +155,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Scrape recipies from Pepperplate')
     parser.add_argument('username', help='Username to log in with')
-    parser.add_argument('password', nargs="?", default=None, help='Password to log in with. Will update later to request it if not provided on the command line')
+    parser.add_argument('password', nargs="?", default=None, help='Password to log in with. If not provided on the command line it will be requested by the program')
     args = parser.parse_args()
 
     session = pp_login(args.username, args.password)
