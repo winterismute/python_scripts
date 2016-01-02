@@ -69,13 +69,13 @@ def pp_get_page(session, page):
     soup = BeautifulSoup(r.json()['d'])
     return soup
 
-def scrape_recipe_links(soup):
-    links = [a['href'] for d in soup.find_all('div',{'class':'item'}) for a in d.find_all('a')]
-    print('Found {} recipes'.format(len(links)))
-    return links
+def scrape_recipe_ids(soup):
+    ids = [re.findall(r'id=(\d+)', a['href'])[0] for d in soup.find_all('div',{'class':'item'}) for a in d.find_all('a')]
+    print('Found {} recipes'.format(len(ids)))
+    return ids
 
 def get_recipe(session, id):
-    url = 'http://www.pepperplate.com/recipes/{}'.format(id)
+    url = 'http://www.pepperplate.com/recipes/view.aspx?id={}'.format(id)
     r = session.request('GET', url)
     soup = BeautifulSoup(r.content)
 
@@ -146,9 +146,9 @@ def format_recipe(old_soup):
 
     return new_soup
 
-def save_recipe(title, soup):
+def save_recipe(title, id, soup):
     title = title.replace('/','_').replace('"', '').replace(':','')
-    with open('./recipes/{}.html'.format(title), 'wb') as f:
+    with open('./recipes/{}.{}.html'.format(title, id), 'wb') as f:
         f.write(soup.prettify('latin-1'))
 
 if __name__ == '__main__':
@@ -161,15 +161,15 @@ if __name__ == '__main__':
     session = pp_login(args.username, args.password)
     page = 0
     soup = pp_get_page(session,page)
-    links = scrape_recipe_links(soup)
+    ids = scrape_recipe_ids(soup)
 
-    while len(links) > 0:
-      for l in links:
+    while len(ids) > 0:
+      for id in ids:
         time.sleep(1) #sleep 1 second between requests to not mash the server
-        title, soup = get_recipe(session, l)
+        title, soup = get_recipe(session, id)
         soup = format_recipe(soup)
-        save_recipe(title, soup)
+        save_recipe(title, id, soup)
       page += 1
       soup = pp_get_page(session,page)
-      links = scrape_recipe_links(soup)
+      ids = scrape_recipe_ids(soup)
     
