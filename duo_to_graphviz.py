@@ -13,19 +13,20 @@
 
 # use results with graphviz: ./duo_to_graphviz.py | circo -Tpng -o courses.png
 
+from requests import get
+from collections import namedtuple
+from json import load
 
 def download_api_data():
-    import requests
-    return requests.get('https://incubator.duolingo.com/api/1/courses/list')
+    return get('https://incubator.duolingo.com/api/1/courses/list')
 
 def get_api_data():
     fp = download_api_data()
     return fp.json()
 
 def get_file_data(f):
-    import json
     with open(f) as fp:
-      data = json.load(fp)
+      data = load(fp)
     return data
 
 def filter_languages(data, languages, source, dest, phases):
@@ -95,26 +96,22 @@ def main():
     else:
       data = get_file_data(args.filename)
 
-    if args.download == 'Y':
-      print(data.text)
+    
+    languages = {code:details['name'] for (code,details) in data['languages'].items()}
 
-    else:
-        languages = {code:details['name'] for (code,details) in data['languages'].items()}
+    Language = namedtuple('Language', ['phase', 'source', 'dest'])
 
-        from collections import namedtuple
-        Language = namedtuple('Language', ['phase', 'source', 'dest'])
+    course_data = [Language(direction['phase'],direction['from_language_id'],direction['learning_language_id'])
+                        for direction in data['directions']]
+    course_data = filter_languages(course_data,
+                        languages,
+                        list(map(str.upper, args.source_language)),
+                        list(map(str.upper, args.dest_language)),
+                        args.phase)
 
-        course_data = [Language(direction['phase'],direction['from_language_id'],direction['learning_language_id'])
-                            for direction in data['directions']]
-        course_data = filter_languages(course_data,
-                            languages,
-                            list(map(str.upper, args.source_language)),
-                            list(map(str.upper, args.dest_language)),
-                            args.phase)
+    colours = {phase:colour for (phase, colour) in zip([1,2,3], args.colours)}
 
-        colours = {phase:colour for (phase, colour) in zip([1,2,3], args.colours)}
-
-        parse_json(course_data, languages, colours)
+    parse_json(course_data, languages, colours)
 
 if __name__ == '__main__':
     main()
