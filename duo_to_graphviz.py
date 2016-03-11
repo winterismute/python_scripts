@@ -85,7 +85,11 @@ def main():
     args = get_arguments()
 
     data = None
-    if args.download == 'Y' or not args.filename:
+    if args.download == 'Y':
+        print(download_api_data().text)
+        return
+
+    if not args.filename:
       #grab the latest course data from the API
       data = get_api_data()
     else:
