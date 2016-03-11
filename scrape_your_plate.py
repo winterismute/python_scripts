@@ -105,6 +105,7 @@ def format_recipe(old_soup):
         hdr['src'] = './img/{}'.format(m.group(1))
         new_soup.body.append(hdr)
 
+    source = soup.find(id='cphMiddle_cphMain_hlSource')
     title = old_soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
     hdr = new_soup.new_tag('title')
     hdr.append(title)
@@ -113,7 +114,8 @@ def format_recipe(old_soup):
     hdr = new_soup.new_tag('h1')
     hdr.append(title)
     new_soup.body.append(hdr)
-
+    if source:
+        new_soup.body.append(source)
     hdr = new_soup.new_tag('h3')
     hdr.append('Ingredients')
     new_soup.body.append(hdr)
