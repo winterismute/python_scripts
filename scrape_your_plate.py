@@ -10,6 +10,7 @@ import json
 import time
 import getpass
 import re
+import os
 
 def pp_login(username, password):
     if not password:
@@ -19,16 +20,16 @@ def pp_login(username, password):
 
     url = 'https://www.pepperplate.com/login.aspx'
     headers = {"User-Agent":"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36"}
-    
+
     s = requests.Session()
     s.headers.update(headers)
     r = s.get(url)
-    
+
     soup = BeautifulSoup(r.content)
-    
+
     VIEWSTATE = soup.find(id='__VIEWSTATE')['value']
     EVENTVALIDATION = soup.find(id='__EVENTVALIDATION')['value']
-    
+
     login_data={"__VIEWSTATE":VIEWSTATE,
     "__EVENTVALIDATION":EVENTVALIDATION,
     "__EVENTARGUMENT":'',
@@ -37,7 +38,7 @@ def pp_login(username, password):
     "ctl00$cphMain$loginForm$tbPassword":password,
     "ctl00$cphMain$loginForm$cbRememberMe":'on'
     }
-    
+
     r = s.post(url, data=login_data)
     if r.url == 'http://www.pepperplate.com/recipes/default.aspx':
         print('Login sucessful')
@@ -74,7 +75,7 @@ def scrape_recipe_ids(soup):
     print('Found {} recipes'.format(len(ids)))
     return ids
 
-def get_recipe(session, id):
+def get_recipe(session, id, imgpath):
     url = 'http://www.pepperplate.com/recipes/view.aspx?id={}'.format(id)
     r = session.request('GET', url)
     soup = BeautifulSoup(r.content)
@@ -88,7 +89,7 @@ def get_recipe(session, id):
         r = requests.get(thumb['src'])
 
         m = re.search('recipes/(.+\.jpg)', thumb['src'])
-        with open('./recipes/img/{}'.format(m.group(1)),'wb') as img:
+        with open(imgpath + '/{}'.format(m.group(1)),'wb') as img:
             img.write(r.content)
 
     return title, soup
@@ -148,9 +149,9 @@ def format_recipe(old_soup):
 
     return new_soup
 
-def save_recipe(title, id, soup):
+def save_recipe(title, id, soup, savepath):
     title = title.replace('/','_').replace('"', '').replace(':','')
-    with open('./recipes/{}.{}.html'.format(title, id), 'wb') as f:
+    with open(savepath + '/{}.{}.html'.format(title, id), 'wb') as f:
         f.write(soup.prettify('latin-1'))
 
 if __name__ == '__main__':
@@ -158,8 +159,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Scrape recipies from Pepperplate')
     parser.add_argument('username', help='Username to log in with')
     parser.add_argument('password', nargs="?", default=None, help='Password to log in with. If not provided on the command line it will be requested by the program')
+    parser.add_argument('directory', nargs="?", default='recipes', help='Directory to which download everything. defaults to "recipes"')
     args = parser.parse_args()
 
+    imgpath = os.path.join(args.directory, 'img')
+    if not os.path.exists(imgpath):
+        os.makedirs(imgpath)
     session = pp_login(args.username, args.password)
     page = 0
     soup = pp_get_page(session,page)
@@ -168,10 +173,10 @@ if __name__ == '__main__':
     while len(ids) > 0:
       for id in ids:
         time.sleep(1) #sleep 1 second between requests to not mash the server
-        title, soup = get_recipe(session, id)
+        title, soup = get_recipe(session, id, imgpath)
         soup = format_recipe(soup)
-        save_recipe(title, id, soup)
+        save_recipe(title, id, soup, args.directory)
       page += 1
       soup = pp_get_page(session,page)
       ids = scrape_recipe_ids(soup)
-    
+
