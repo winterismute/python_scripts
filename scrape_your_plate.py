@@ -11,6 +11,7 @@ import time
 import getpass
 import re
 import os
+import json
 
 def pp_login(username, password):
     if not password:
@@ -75,7 +76,7 @@ def scrape_recipe_ids(soup):
     print('Found {} recipes'.format(len(ids)))
     return ids
 
-def get_recipe(session, id, imgpath):
+def get_recipe(session, id, saveimage, imgpath):
     url = 'http://www.pepperplate.com/recipes/view.aspx?id={}'.format(id)
     r = session.request('GET', url)
     soup = BeautifulSoup(r.content)
@@ -83,14 +84,15 @@ def get_recipe(session, id, imgpath):
     title = soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
     print('Downloaded "{}"'.format(title))
 
-    thumb = soup.find(id='cphMiddle_cphMain_imgRecipeThumb')
-    if thumb:
-        print('* Downloading thumbnail')
-        r = requests.get(thumb['src'])
+    if saveimage:
+        thumb = soup.find(id='cphMiddle_cphMain_imgRecipeThumb')
+        if thumb:
+            print('* Downloading thumbnail')
+            r = requests.get(thumb['src'])
 
-        m = re.search('recipes/(.+\.jpg)', thumb['src'])
-        with open(imgpath + '/{}'.format(m.group(1)),'wb') as img:
-            img.write(r.content)
+            m = re.search('recipes/(.+\.jpg)', thumb['src'])
+            with open(imgpath + '/{}'.format(m.group(1)),'wb') as img:
+                img.write(r.content)
 
     return title, soup
 
@@ -106,7 +108,7 @@ def format_recipe(old_soup):
         hdr['src'] = './img/{}'.format(m.group(1))
         new_soup.body.append(hdr)
 
-    source = soup.find(id='cphMiddle_cphMain_hlSource')
+    source = old_soup.find(id='cphMiddle_cphMain_hlSource')
     title = old_soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
     hdr = new_soup.new_tag('title')
     hdr.append(title)
@@ -149,7 +151,53 @@ def format_recipe(old_soup):
 
     return new_soup
 
-def save_recipe(title, id, soup, savepath):
+def recipe_make_obj(soup, recipeid):
+    title = soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
+
+    newSource = ''
+    source = soup.find(id='cphMiddle_cphMain_hlSource')
+    if source:
+        newSource = source.text;
+
+    tags = soup.find(id='cphMiddle_cphMain_pnlTags')
+    newTags = []
+    if tags:
+        for t in tags.span.text.strip().split(','):
+            newTags.append(t.strip())
+
+    newIngList = []
+    inglist = soup.find('ul', {'class':'inggroups'})
+    if inglist:
+        for li in inglist.findAll('li', {'class':'item'}):
+            ing = {}
+            iq = li.find('span', {'class':'ingquantity'})
+            ing['quantity'] = iq.text.strip()
+            iq.replaceWith('')
+            ing['name'] = li.span.text.strip()
+            newIngList.append(ing)
+
+    newSteps = [];
+    stepsEl = soup.find('ol', {'class':'dirgroupitems'})
+    if stepsEl:
+        for step in stepsEl.findAll('li'):
+            newSteps.append(step.span.text.strip())
+
+    newNotes = ''
+    notes = soup.find(id="cphMiddle_cphMain_lblNotes")
+    if notes:
+        newNotes = notes.text.strip()
+
+    recipeObj = {}
+    recipeObj['id'] = id
+    recipeObj['title'] = title
+    recipeObj['source'] = newSource
+    recipeObj['tags'] = newTags
+    recipeObj['ingredients'] = newIngList
+    recipeObj['steps'] = newSteps
+    recipeObj['notes'] = newNotes
+    return recipeObj
+
+def save_recipe_html(title, id, soup, savepath):
     title = title.replace('/','_').replace('"', '').replace(':','')
     with open(savepath + '/{}.{}.html'.format(title, id), 'wb') as f:
         f.write(soup.prettify('latin-1'))
@@ -160,11 +208,14 @@ if __name__ == '__main__':
     parser.add_argument('username', help='Username to log in with')
     parser.add_argument('password', nargs="?", default=None, help='Password to log in with. If not provided on the command line it will be requested by the program')
     parser.add_argument('directory', nargs="?", default='recipes', help='Directory to which download everything. defaults to "recipes"')
+    parser.add_argument('method', nargs="?", default='html', help='Can be either html (default) or json.')
     args = parser.parse_args()
 
+    dojson = args.method == 'json'
     imgpath = os.path.join(args.directory, 'img')
-    if not os.path.exists(imgpath):
-        os.makedirs(imgpath)
+    pathToCreate = args.directory if dojson else imgpath
+    if not os.path.exists(pathToCreate):
+        os.makedirs(pathToCreate)
     session = pp_login(args.username, args.password)
     page = 0
     soup = pp_get_page(session,page)
@@ -173,9 +224,14 @@ if __name__ == '__main__':
     while len(ids) > 0:
       for id in ids:
         time.sleep(1) #sleep 1 second between requests to not mash the server
-        title, soup = get_recipe(session, id, imgpath)
-        soup = format_recipe(soup)
-        save_recipe(title, id, soup, args.directory)
+        title, soup = get_recipe(session, id, not dojson, imgpath)
+        if (dojson):
+             obj = recipe_make_obj(soup, id)
+             with open(args.directory + '/{}.{}.json'.format(title, id), 'w') as jf:
+                json.dump(obj, jf, indent=4)
+        else:
+            soup = format_recipe(soup)
+            save_recipe_html(title, id, soup, args.directory)
       page += 1
       soup = pp_get_page(session,page)
       ids = scrape_recipe_ids(soup)
