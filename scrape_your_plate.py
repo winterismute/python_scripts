@@ -13,6 +13,10 @@ import re
 import os
 import json
 
+gUnitWords = ['tablespoon', 'tbsp', 'teaspoon', 'tsp', 'rib', 'cup', 'sheet', 'pinch', 'ounce', 'oz', 'gallon', 'gal', 'pound', 'lb', 'spring', 'clove', 'gram', 'g', 'gr', 'milliliters', 'ml', 'cucchiai', 'cucchiaio', 'cucchiaino', 'rametto', 'rametti', 'grind', 'handful', 'sachet', 'stalk', 'mug', 'spicchi', 'spicchio', 'ciuffo', 'ciuffi', 'can', 'pack', 'package', 'bustino', 'dash', 'slice', 'head', 'kilogram', 'kilo', 'chili',  'chilo', 'kg', 'pint', 'pt', 'piece', 'bottle', 'loaf', 'pile', 'block', 'sprinkle', 'wedge']
+
+gUnitWordsSet = set(gUnitWords)
+
 def pp_login(username, password):
     if not password:
         password = getpass.getpass('Please enter the password for account {}: '.format(username))
@@ -154,6 +158,34 @@ def format_recipe(old_soup):
 
     return new_soup
 
+def mynorm(text):
+    normed = ''.join(e for e in text if e.isalnum())
+    if normed[-1] == 's':
+        normed = normed[:-1]
+    return normed
+
+def extractIngredientUnit(text):
+    ret = ''
+    tokens = text.split(' ')
+    revtokens = list(tokens)
+    revtokens.reverse()
+    index = 0
+    unit = ''
+    ingredient = text
+    for w in revtokens:
+        w = mynorm(w)
+        if w in gUnitWordsSet:
+            if index == len(tokens)-1:
+                unit = tokens[0]
+                ingredient = ' '.join(tokens[1:])
+            else:
+                ni = len(tokens) - index
+                unit = ' '.join(tokens[0:ni])
+                ingredient = ' '.join(tokens[ni:])
+            return unit, ingredient
+        index += 1
+    return unit, ingredient
+
 def recipe_make_obj(soup, recipeid):
     title = soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
     url = make_recipe_url(id)
@@ -184,7 +216,10 @@ def recipe_make_obj(soup, recipeid):
             else:
                 ing['quantity'] = float(quantityString)
             iq.replaceWith('')
-            ing['name'] = li.span.text.strip()
+            ingText = li.span.text.strip()
+            newUnit, newText = extractIngredientUnit(ingText)
+            ing['name'] = newText
+            ing['unit'] = newUnit
             newIngList.append(ing)
 
     newSteps = [];
@@ -233,7 +268,7 @@ if __name__ == '__main__':
     soup = pp_get_page(session,page)
     ids = scrape_recipe_ids(soup)
 
-    nsaved = 0;
+    nsaved = 0
     maxtosave = 1
 
     while len(ids) > 0:
