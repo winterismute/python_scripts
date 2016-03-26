@@ -171,12 +171,11 @@ if __name__ == '__main__':
     ids = scrape_recipe_ids(soup)
 
     while len(ids) > 0:
-      for id in ids:
-        time.sleep(1) #sleep 1 second between requests to not mash the server
-        title, soup = get_recipe(session, id, imgpath)
-        soup = format_recipe(soup)
-        save_recipe(title, id, soup, args.directory)
-      page += 1
-      soup = pp_get_page(session,page)
-      ids = scrape_recipe_ids(soup)
-
+        for id in ids:
+            time.sleep(1) #sleep 1 second between requests to not mash the server
+            title, soup = get_recipe(session, id, imgpath)
+            soup = format_recipe(soup)
+            save_recipe(title, id, soup, args.directory)
+        page += 1
+        soup = pp_get_page(session,page)
+        ids = scrape_recipe_ids(soup)
