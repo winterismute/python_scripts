@@ -175,7 +175,14 @@ def recipe_make_obj(soup, recipeid):
         for li in inglist.findAll('li', {'class':'item'}):
             ing = {}
             iq = li.find('span', {'class':'ingquantity'})
-            ing['quantity'] = iq.text.strip()
+            quantityString = iq.text.strip()
+            if not quantityString:
+                ing['quantity'] = 0.0
+            elif "/" in quantityString:
+                ops = quantityString.split('/')
+                ing['quantity'] = float(ops[0]) / float(ops[1])
+            else:
+                ing['quantity'] = float(quantityString)
             iq.replaceWith('')
             ing['name'] = li.span.text.strip()
             newIngList.append(ing)
@@ -226,18 +233,25 @@ if __name__ == '__main__':
     soup = pp_get_page(session,page)
     ids = scrape_recipe_ids(soup)
 
-    while len(ids) > 0:
-      for id in ids:
-        time.sleep(1) #sleep 1 second between requests to not mash the server
-        title, soup = get_recipe(session, id, not dojson, imgpath)
-        if (dojson):
-             obj = recipe_make_obj(soup, id)
-             with open(args.directory + '/{}.{}.json'.format(title, id), 'w') as jf:
-                json.dump(obj, jf, indent=4)
-        else:
-            soup = format_recipe(soup)
-            save_recipe_html(title, id, soup, args.directory)
-      page += 1
-      soup = pp_get_page(session,page)
-      ids = scrape_recipe_ids(soup)
+    nsaved = 0;
+    maxtosave = 1
 
+    while len(ids) > 0:
+        for id in ids:
+            time.sleep(1) #sleep 1 second between requests to not mash the server
+            title, soup = get_recipe(session, id, not dojson, imgpath)
+            if (dojson):
+                obj = recipe_make_obj(soup, id)
+                with open(args.directory + '/{}.{}.json'.format(title, id), 'w') as jf:
+                    json.dump(obj, jf, indent=4)
+            else:
+                soup = format_recipe(soup)
+                save_recipe_html(title, id, soup, args.directory)
+            nsaved += 1
+            if nsaved >= maxtosave:
+                break
+        if nsaved >= maxtosave:
+            break
+        page += 1
+        soup = pp_get_page(session,page)
+        ids = scrape_recipe_ids(soup)
