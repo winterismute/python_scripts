@@ -193,7 +193,12 @@ def recipe_make_obj(soup, recipeid):
     newSource = ''
     source = soup.find(id='cphMiddle_cphMain_hlSource')
     if source:
-        newSource = source.text;
+        newSource = source.text.strip()
+
+    newDesc = ''
+    desc = soup.find(id='cphMiddle_cphMain_lblDescription')
+    if desc:
+        newDesc = desc.text.strip()
 
     tags = soup.find(id='cphMiddle_cphMain_pnlTags')
     newTags = []
@@ -237,10 +242,11 @@ def recipe_make_obj(soup, recipeid):
     recipeObj['id'] = id
     recipeObj['url'] = url
     recipeObj['title'] = title
-    recipeObj['source'] = newSource
+    recipeObj['origin'] = newSource
     recipeObj['tags'] = newTags
     recipeObj['ingredients'] = newIngList
     recipeObj['steps'] = newSteps
+    recipeObj['desc'] = newDesc
     recipeObj['notes'] = newNotes
     return recipeObj
 
