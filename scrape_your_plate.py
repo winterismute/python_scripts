@@ -76,8 +76,11 @@ def scrape_recipe_ids(soup):
     print('Found {} recipes'.format(len(ids)))
     return ids
 
+def make_recipe_url(id):
+    return 'http://www.pepperplate.com/recipes/view.aspx?id={}'.format(id)
+
 def get_recipe(session, id, saveimage, imgpath):
-    url = 'http://www.pepperplate.com/recipes/view.aspx?id={}'.format(id)
+    url = make_recipe_url(id)
     r = session.request('GET', url)
     soup = BeautifulSoup(r.content)
 
@@ -153,6 +156,7 @@ def format_recipe(old_soup):
 
 def recipe_make_obj(soup, recipeid):
     title = soup.find(id='cphMiddle_cphMain_lblTitle').get_text().strip()
+    url = make_recipe_url(id)
 
     newSource = ''
     source = soup.find(id='cphMiddle_cphMain_hlSource')
@@ -189,6 +193,7 @@ def recipe_make_obj(soup, recipeid):
 
     recipeObj = {}
     recipeObj['id'] = id
+    recipeObj['url'] = url
     recipeObj['title'] = title
     recipeObj['source'] = newSource
     recipeObj['tags'] = newTags
