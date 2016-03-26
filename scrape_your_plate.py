@@ -165,7 +165,6 @@ def mynorm(text):
     return normed
 
 def extractIngredientUnit(text):
-    ret = ''
     tokens = text.split(' ')
     revtokens = list(tokens)
     revtokens.reverse()
